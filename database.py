@@ -6,6 +6,7 @@ class DB:
 
     def __init__(self):
         self.conn = None
+        self.columns = None
         self.connect()
 
     def connect(self):
@@ -31,27 +32,70 @@ class DB:
         if self.conn is None or self.conn.closed:
             self.connect()
 
+    @staticmethod
+    def _quote_identifier(identifier):
+        return '"' + identifier.replace('"', '""') + '"'
+
+    def _load_columns(self):
+        query = """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'flights'
+        """
+
+        try:
+            self.conn.rollback()
+            with self.conn.cursor() as cursor:
+                cursor.execute(query)
+                columns = [row[0] for row in cursor.fetchall()]
+        except psycopg2.Error as e:
+            if self.conn and not self.conn.closed:
+                self.conn.rollback()
+            detail = e.pgerror.strip() if e.pgerror else str(e)
+            raise RuntimeError(f"Could not read database schema: {detail}") from e
+
+        if not columns:
+            raise RuntimeError('Table "public.flights" was not found in the connected database')
+
+        self.columns = {column.lower(): column for column in columns}
+
+    def _column(self, name):
+        if self.columns is None:
+            self._load_columns()
+
+        column = self.columns.get(name.lower())
+        if column is None:
+            available = ", ".join(sorted(self.columns.values()))
+            raise RuntimeError(f'Column "{name}" was not found in flights. Available columns: {available}')
+
+        return self._quote_identifier(column)
+
     def _fetchall(self, query, params=None):
         self._ensure_connection()
 
         try:
+            self.conn.rollback()
             with self.conn.cursor() as cursor:
                 cursor.execute(query, params)
                 return cursor.fetchall()
-        except psycopg2.Error:
+        except psycopg2.Error as e:
             if self.conn and not self.conn.closed:
                 self.conn.rollback()
-            raise
+            detail = e.pgerror.strip() if e.pgerror else str(e)
+            raise RuntimeError(f"Database query failed: {detail}") from e
 
     # ============================
     # FETCH CITY NAMES
     # ============================
     def fetch_city_names(self):
 
-        query = """
-        SELECT DISTINCT "Destination" FROM flights
+        destination_col = self._column("Destination")
+        source_col = self._column("Source")
+
+        query = f"""
+        SELECT DISTINCT {destination_col} FROM flights
         UNION
-        SELECT DISTINCT "Source" FROM flights
+        SELECT DISTINCT {source_col} FROM flights
         """
 
         data = self._fetchall(query)
@@ -63,10 +107,18 @@ class DB:
     # ============================
     def fetch_all_flights(self, source, destination):
 
-        query = """
-        SELECT "Airline", "Route", "Dep_Time", "Duration", "Price"
+        airline_col = self._column("Airline")
+        route_col = self._column("Route")
+        dep_time_col = self._column("Dep_Time")
+        duration_col = self._column("Duration")
+        price_col = self._column("Price")
+        source_col = self._column("Source")
+        destination_col = self._column("Destination")
+
+        query = f"""
+        SELECT {airline_col}, {route_col}, {dep_time_col}, {duration_col}, {price_col}
         FROM flights
-        WHERE "Source" = %s AND "Destination" = %s
+        WHERE {source_col} = %s AND {destination_col} = %s
         """
 
         return self._fetchall(query, (source, destination))
@@ -76,10 +128,12 @@ class DB:
     # ============================
     def fetch_airline_frequency(self):
 
-        query = """
-        SELECT "Airline", COUNT(*)
+        airline_col = self._column("Airline")
+
+        query = f"""
+        SELECT {airline_col}, COUNT(*)
         FROM flights
-        GROUP BY "Airline"
+        GROUP BY {airline_col}
         """
 
         data = self._fetchall(query)
@@ -94,13 +148,16 @@ class DB:
     # ============================
     def busy_airport(self):
 
-        query = """
-        SELECT "Source", COUNT(*) FROM (
-            SELECT "Source" FROM flights
+        source_col = self._column("Source")
+        destination_col = self._column("Destination")
+
+        query = f"""
+        SELECT city, COUNT(*) FROM (
+            SELECT {source_col} AS city FROM flights
             UNION ALL
-            SELECT "Destination" FROM flights
+            SELECT {destination_col} AS city FROM flights
         ) t
-        GROUP BY t."Source"
+        GROUP BY city
         ORDER BY COUNT(*) DESC
         """
 
@@ -116,10 +173,12 @@ class DB:
     # ============================
     def daily_frequency(self):
 
-        query = """
-        SELECT "Date_of_Journey", COUNT(*)
+        date_col = self._column("Date_of_Journey")
+
+        query = f"""
+        SELECT {date_col}, COUNT(*)
         FROM flights
-        GROUP BY "Date_of_Journey"
+        GROUP BY {date_col}
         """
 
         data = self._fetchall(query)
