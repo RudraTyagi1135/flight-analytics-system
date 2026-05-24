@@ -1,31 +1,24 @@
-import pymysql
-import os
-from dotenv import load_dotenv
+import psycopg2
+import streamlit as st
+
 
 class DB:
 
     def __init__(self):
-        load_dotenv()
 
-        try:
-            self.conn = pymysql.connect(
-                host=os.getenv("DB_HOST"),
-                user=os.getenv("DB_USER"),
-                password=os.getenv("DB_PASSWORD"),
-                database=os.getenv("DB_NAME"),
-                port=int(os.getenv("DB_PORT")),
-                cursorclass=pymysql.cursors.Cursor
-            )
+        self.conn = psycopg2.connect(
+            host=st.secrets["DB_HOST"],
+            user=st.secrets["DB_USER"],
+            password=st.secrets["DB_PASSWORD"],
+            dbname=st.secrets["DB_NAME"],
+            port=st.secrets["DB_PORT"]
+        )
 
-            self.cursor = self.conn.cursor()
-            print("✅ Connection established")
+        self.cursor = self.conn.cursor()
 
-        except Exception as e:
-            print("❌ Connection error:", e)
-
-    # ================================
-    # Fetch all unique cities
-    # ================================
+    # ============================
+    # FETCH CITY NAMES
+    # ============================
     def fetch_city_names(self):
 
         query = """
@@ -35,13 +28,14 @@ class DB:
         """
 
         self.cursor.execute(query)
+
         data = self.cursor.fetchall()
 
         return [item[0] for item in data]
 
-    # ================================
-    # Fetch flights between cities
-    # ================================
+    # ============================
+    # FETCH FLIGHTS
+    # ============================
     def fetch_all_flights(self, source, destination):
 
         query = """
@@ -51,11 +45,12 @@ class DB:
         """
 
         self.cursor.execute(query, (source, destination))
+
         return self.cursor.fetchall()
 
-    # ================================
-    # Airline frequency
-    # ================================
+    # ============================
+    # AIRLINE FREQUENCY
+    # ============================
     def fetch_airline_frequency(self):
 
         query = """
@@ -65,6 +60,7 @@ class DB:
         """
 
         self.cursor.execute(query)
+
         data = self.cursor.fetchall()
 
         airline = [item[0] for item in data]
@@ -72,9 +68,9 @@ class DB:
 
         return airline, frequency
 
-    # ================================
-    # Busy airports
-    # ================================
+    # ============================
+    # BUSY AIRPORTS
+    # ============================
     def busy_airport(self):
 
         query = """
@@ -88,6 +84,7 @@ class DB:
         """
 
         self.cursor.execute(query)
+
         data = self.cursor.fetchall()
 
         city = [item[0] for item in data]
@@ -95,9 +92,9 @@ class DB:
 
         return city, frequency
 
-    # ================================
-    # Daily frequency
-    # ================================
+    # ============================
+    # DAILY FLIGHT TREND
+    # ============================
     def daily_frequency(self):
 
         query = """
@@ -107,17 +104,10 @@ class DB:
         """
 
         self.cursor.execute(query)
+
         data = self.cursor.fetchall()
 
         date = [item[0] for item in data]
         frequency = [item[1] for item in data]
 
         return date, frequency
-
-    # ================================
-    # Close connection
-    # ================================
-    def close(self):
-        self.cursor.close()
-        self.conn.close()
-        print("🔒 Connection closed")
