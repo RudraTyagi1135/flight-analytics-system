@@ -33,9 +33,9 @@ class DB:
     def fetch_city_names(self):
 
         query = """
-        SELECT DISTINCT Destination FROM flights
+        SELECT DISTINCT "Destination" FROM flights
         UNION
-        SELECT DISTINCT Source FROM flights
+        SELECT DISTINCT "Source" FROM flights
         """
 
         self.cursor.execute(query)
@@ -50,9 +50,9 @@ class DB:
     def fetch_all_flights(self, source, destination):
 
         query = """
-        SELECT Airline, Route, Dep_Time, Duration, Price
+        SELECT "Airline", "Route", "Dep_Time", "Duration", "Price"
         FROM flights
-        WHERE Source = %s AND Destination = %s
+        WHERE "Source" = %s AND "Destination" = %s
         """
 
         self.cursor.execute(query, (source, destination))
@@ -65,9 +65,9 @@ class DB:
     def fetch_airline_frequency(self):
 
         query = """
-        SELECT Airline, COUNT(*)
+        SELECT "Airline", COUNT(*)
         FROM flights
-        GROUP BY Airline
+        GROUP BY "Airline"
         """
 
         self.cursor.execute(query)
@@ -85,12 +85,12 @@ class DB:
     def busy_airport(self):
 
         query = """
-        SELECT Source, COUNT(*) FROM (
-            SELECT Source FROM flights
+        SELECT "Source", COUNT(*) FROM (
+            SELECT "Source" FROM flights
             UNION ALL
-            SELECT Destination FROM flights
+            SELECT "Destination" FROM flights
         ) t
-        GROUP BY t.Source
+        GROUP BY t."Source"
         ORDER BY COUNT(*) DESC
         """
 
@@ -109,9 +109,9 @@ class DB:
     def daily_frequency(self):
 
         query = """
-        SELECT Date_of_Journey, COUNT(*)
+        SELECT "Date_of_Journey", COUNT(*)
         FROM flights
-        GROUP BY Date_of_Journey
+        GROUP BY "Date_of_Journey"
         """
 
         self.cursor.execute(query)
