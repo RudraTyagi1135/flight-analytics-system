@@ -1,324 +1,149 @@
-# ✈️ Flight Analytics System (SQL + Streamlit)
+# Flight Analytics System
 
-A **full-stack data analytics application** that enables users to explore flight data using **SQL-powered queries** and visualize insights through an **interactive Streamlit dashboard**.
+A Streamlit analytics dashboard for exploring flight routes and traffic patterns from a PostgreSQL database hosted on Supabase.
 
-🔗 **Live App:** https://prcqczhhrpgbczsmwr73ld.streamlit.app/
+Live app: https://flight-analytics-system-1135.streamlit.app/
 
----
+## Overview
 
-## 🚀 Project Overview
+The application lets users:
 
-This project is a **flight analytics platform** built on top of a relational database, combining:
+- Search available flights by source and destination
+- View airline distribution
+- Identify busy airports by source and destination traffic
+- Track daily flight frequency trends
 
-- **MySQL database** for structured data storage  
-- **PyMySQL-based backend layer** for query abstraction  
-- **Streamlit UI** for user interaction  
-- **Plotly visualizations** for insights  
+The route search is source-aware: after selecting a source city, the destination dropdown only shows destinations that exist in the database.
 
-It allows users to:
+## Tech Stack
 
-- Search flights between cities  
-- Analyze airline distribution  
-- Identify high-traffic airports  
-- Track daily flight trends  
+| Layer | Technology |
+| --- | --- |
+| UI | Streamlit |
+| Database | Supabase PostgreSQL |
+| DB Connector | psycopg2 |
+| Data Handling | Pandas |
+| Visualization | Plotly |
+| Deployment | Streamlit Cloud |
 
----
+## Architecture
 
-## ⚙️ System Architecture
-
-```
+```text
 Streamlit UI (app.py)
-        ↓
-Database Layer (database.py)
-        ↓
-MySQL Database (flights)
+        |
+Database access layer (database.py)
+        |
+Supabase PostgreSQL table: flights
 ```
 
-### Layer Breakdown
+## Project Structure
 
-- **UI Layer (`app.py`)**  
-  Handles user input, layout, and visualizations using Streamlit  
-
-- **Database Layer (`database.py`)**  
-  Encapsulates SQL queries and connection logic using a reusable class  
-
-- **Data Layer (MySQL)**  
-  Stores flight dataset and supports analytical queries  
-
----
-
-## 📂 Project Structure
-
-```
+```text
 flight-analytics-system/
-│
-├── app.py                # Streamlit dashboard (UI layer)
-├── database.py           # DB abstraction layer (PyMySQL)
-├── crud_demo.py          # DB setup + CRUD demo
-├── data_loader.py        # CSV → MySQL loader (local / AWS)
-├── flights.csv           # Dataset
-│
-├── requirements.txt
-├── .env                  # Environment variables (ignored)
+├── app.py              # Streamlit dashboard
+├── database.py         # PostgreSQL query layer
+├── flights.csv         # Source dataset used to populate Supabase
+├── requirements.txt    # Python dependencies
 ├── .gitignore
+├── LICENSE
 └── README.md
 ```
 
----
+## Database Schema
 
-## 🔍 Core Features
+The app expects a Supabase PostgreSQL table named `flights` with these columns:
 
-### 🔎 1. Flight Search
-
-- Select **source and destination**
-- Fetch results using parameterized SQL queries  
-- Display structured results in table format  
-
-```sql
-SELECT Airline, Route, Dep_Time, Duration, Price
-FROM flights
-WHERE Source = %s AND Destination = %s;
+```text
+Airline
+Date_of_Journey
+Source
+Destination
+Route
+Dep_Time
+Duration
+Total_Stops
+Price
 ```
 
----
+The database layer resolves column names case-insensitively, so it can work with either quoted CSV-style names like `"Source"` or lowercase PostgreSQL names like `source`.
 
-### 📊 2. Airline Distribution
+## Streamlit Secrets
 
-- Pie chart showing number of flights per airline  
-- Uses Plotly for interactive visualization  
+Configure the following secrets in Streamlit Cloud:
 
----
-
-### 🏙️ 3. Busy Airports Analysis
-
-- Combines **source + destination traffic**
-
-```sql
-SELECT Source, COUNT(*) FROM (
-    SELECT Source FROM flights
-    UNION ALL
-    SELECT Destination FROM flights
-) t
-GROUP BY t.Source
-ORDER BY COUNT(*) DESC;
+```toml
+DB_HOST = "your-supabase-db-host"
+DB_USER = "postgres"
+DB_PASSWORD = "your-password"
+DB_NAME = "postgres"
+DB_PORT = "5432"
 ```
 
----
+The app connects with `sslmode=require`, which is required for Supabase-hosted PostgreSQL connections.
 
-### 📅 4. Daily Flight Trends
+## Local Setup
 
-- Time-series analysis of flights per day  
-
-```sql
-SELECT Date_of_Journey, COUNT(*)
-FROM flights
-GROUP BY Date_of_Journey;
-```
-
----
-
-## 🗄️ Database Layer Design
-
-All database operations are handled via a reusable class:
-
-📄 Implementation: [`database.py`](./database.py)
-
-### Key Methods
-
-- `fetch_city_names()` → Unique cities  
-- `fetch_all_flights()` → Flight search  
-- `fetch_airline_frequency()` → Airline distribution  
-- `busy_airport()` → Airport traffic  
-- `daily_frequency()` → Time-series data  
-
-### Key Design Decisions
-
-- Environment-based credentials (`.env`)
-- Parameterized queries (SQL injection safe)
-- Modular and reusable DB layer
-
----
-
-## 🧪 Database Setup (CRUD Demo)
-
-The project includes a demo script:
-
-📄 Demo Script: [`crud_demo.py`](./crud_demo.py)
-
-This demonstrates:
-
-- Database creation  
-- Table creation  
-- Insert, update, delete operations  
-- Basic SQL workflow  
-
----
-
-## 📦 Data Ingestion
-
-Dataset loading is handled via:
-
-📄 Data Loader: [`data_loader.py`](./data_loader.py)
-
-Supports:
-
-- Local MySQL ingestion  
-- AWS RDS connection (via SQLAlchemy)
-
----
-
-## 🖥️ Application Logic
-
-Main application flow:
-
-📄 Application Entry Point: [`app.py`](./app.py)
-
-### UI Sections
-
-- **Check Flights**
-  - Input: Source, Destination  
-  - Output: Flight table  
-
-- **Analytics Dashboard**
-  - Airline distribution (Pie chart)
-  - Busy airports (Bar chart)
-  - Daily trends (Line chart)
-
----
-
-## 🛠️ How to Run (Local)
-
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/your-username/flight-analytics-system.git
-cd flight-analytics-system
-```
-
----
-
-### 2. Create Virtual Environment
+1. Create and activate a virtual environment:
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 ```
 
----
-
-### 3. Install Dependencies
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
+3. Add local Streamlit secrets:
 
-### 4. Configure `.env`
+Create `.streamlit/secrets.toml`:
 
-```env
-DB_HOST=127.0.0.1
-DB_USER=your_user
-DB_PASSWORD=your_password
-DB_NAME=flights
-DB_PORT=3306
+```toml
+DB_HOST = "your-supabase-db-host"
+DB_USER = "postgres"
+DB_PASSWORD = "your-password"
+DB_NAME = "postgres"
+DB_PORT = "5432"
 ```
 
----
-
-### 5. Load Dataset
-
-```bash
-python data_loader.py
-```
-
----
-
-### 6. Run Application
+4. Run the app:
 
 ```bash
 streamlit run app.py
 ```
 
----
+## Main Features
 
-## 🌐 Deployment Notes
+### Flight Search
 
-- Deployed using **Streamlit Cloud**
-- Requires external database (local DB will not work)
-- Use Streamlit secrets for DB credentials
+- Lists valid source cities from the `flights` table
+- Lists only valid destinations for the selected source
+- Uses parameterized PostgreSQL queries
+- Trims source and destination values before matching
 
----
+### Analytics Dashboard
 
-## 🧰 Tech Stack
+- Airline distribution pie chart
+- Busy airports bar chart
+- Daily flight frequency line chart
 
-| Layer         | Technology |
-|--------------|-----------|
-| UI            | Streamlit |
-| Visualization | Plotly |
-| Backend       | Python |
-| Database      | MySQL |
-| Connector     | PyMySQL |
-| Data Handling | Pandas |
+## Deployment
 
----
+The project is deployed on Streamlit Cloud:
 
-## 🔐 Security Practices
+https://flight-analytics-system-1135.streamlit.app/
 
-- Credentials stored in `.env`
-- Parameterized SQL queries
-- No hardcoded secrets
-- Recommended: avoid root user
+Deployment requirements:
 
----
+- Supabase database must be reachable from Streamlit Cloud
+- Streamlit secrets must contain valid PostgreSQL credentials
+- The `flights` table must already be populated
+- Reboot or clear the Streamlit app cache after changing `database.py`
 
-## ⚠️ Limitations
+## Notes
 
-- No caching (performance can degrade)
-- No pagination for large datasets
-- No authentication system
-- Tight coupling between UI and DB layer
-
----
-
-## 📈 Future Improvements
-
-- Add filters (price, airline, duration)
-- Implement caching (`st.cache_data`)
-- Introduce API layer (FastAPI)
-- Move DB to AWS RDS
-- Add authentication
-- Modularize backend (service layer)
-
----
-
-## 🎯 What This Project Demonstrates
-
-- SQL query design & optimization  
-- Backend abstraction using Python  
-- Data pipeline (CSV → DB → UI)  
-- Interactive dashboard development  
-- Real-world analytics system design  
-
----
-
-## 📌 Strategic Value
-
-This is a **strong system-oriented project** because it shows:
-
-- End-to-end data flow  
-- Real database usage  
-- UI + backend integration  
-
-To make it top-tier:
-
-➡️ Add **API layer + AWS deployment + caching**
-
----
-
-## 👤 Author
-
-**Rudra Tyagi**
-
-ML Systems | MLOps | AI Infrastructure  
-B.Tech Final Year Student
+- Legacy local demo and loader scripts were removed because they no longer match the current Supabase PostgreSQL deployment.
+- `__pycache__` is generated by Python and should not be committed.
+- `flights.csv` is kept as the source dataset reference.

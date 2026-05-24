@@ -143,7 +143,8 @@ else:
 
     Built using:
     - Streamlit  
-    - PyMySQL  
+    - Supabase PostgreSQL  
+    - psycopg2  
     - Plotly  
     """)
 
