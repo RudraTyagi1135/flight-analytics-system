@@ -5,9 +5,11 @@ import streamlit as st
 class DB:
 
     def __init__(self):
+        self.conn = None
+        self.connect()
 
+    def connect(self):
         try:
-
             self.conn = psycopg2.connect(
                 host=st.secrets["DB_HOST"],
                 user=st.secrets["DB_USER"],
@@ -19,15 +21,27 @@ class DB:
 
             self.conn.autocommit = True
 
-            self.cursor = self.conn.cursor()
-
             st.success("Database Connected Successfully")
 
         except Exception as e:
-
             st.error(f"Database Connection Error: {e}")
-
             raise e
+
+    def _ensure_connection(self):
+        if self.conn is None or self.conn.closed:
+            self.connect()
+
+    def _fetchall(self, query, params=None):
+        self._ensure_connection()
+
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute(query, params)
+                return cursor.fetchall()
+        except psycopg2.Error:
+            if self.conn and not self.conn.closed:
+                self.conn.rollback()
+            raise
 
     # ============================
     # FETCH CITY NAMES
@@ -40,9 +54,7 @@ class DB:
         SELECT DISTINCT "Source" FROM flights
         """
 
-        self.cursor.execute(query)
-
-        data = self.cursor.fetchall()
+        data = self._fetchall(query)
 
         return [item[0] for item in data]
 
@@ -57,9 +69,7 @@ class DB:
         WHERE "Source" = %s AND "Destination" = %s
         """
 
-        self.cursor.execute(query, (source, destination))
-
-        return self.cursor.fetchall()
+        return self._fetchall(query, (source, destination))
 
     # ============================
     # AIRLINE FREQUENCY
@@ -72,9 +82,7 @@ class DB:
         GROUP BY "Airline"
         """
 
-        self.cursor.execute(query)
-
-        data = self.cursor.fetchall()
+        data = self._fetchall(query)
 
         airline = [item[0] for item in data]
         frequency = [item[1] for item in data]
@@ -96,9 +104,7 @@ class DB:
         ORDER BY COUNT(*) DESC
         """
 
-        self.cursor.execute(query)
-
-        data = self.cursor.fetchall()
+        data = self._fetchall(query)
 
         city = [item[0] for item in data]
         frequency = [item[1] for item in data]
@@ -116,11 +122,13 @@ class DB:
         GROUP BY "Date_of_Journey"
         """
 
-        self.cursor.execute(query)
-
-        data = self.cursor.fetchall()
+        data = self._fetchall(query)
 
         date = [item[0] for item in data]
         frequency = [item[1] for item in data]
 
         return date, frequency
+
+    def close(self):
+        if self.conn and not self.conn.closed:
+            self.conn.close()
