@@ -6,16 +6,26 @@ class DB:
 
     def __init__(self):
 
-        self.conn = psycopg2.connect(
-            host=st.secrets["DB_HOST"],
-            user=st.secrets["DB_USER"],
-            password=st.secrets["DB_PASSWORD"],
-            dbname=st.secrets["DB_NAME"],
-            port=st.secrets["DB_PORT"],
-            sslmode="require"
-        )
+        try:
 
-        self.cursor = self.conn.cursor()
+            self.conn = psycopg2.connect(
+                host=st.secrets["DB_HOST"],
+                user=st.secrets["DB_USER"],
+                password=st.secrets["DB_PASSWORD"],
+                dbname=st.secrets["DB_NAME"],
+                port=st.secrets["DB_PORT"],
+                sslmode="require"
+            )
+
+            self.cursor = self.conn.cursor()
+
+            st.success("Database Connected Successfully")
+
+        except Exception as e:
+
+            st.error(f"Database Connection Error: {e}")
+
+            raise e
 
     # ============================
     # FETCH CITY NAMES
