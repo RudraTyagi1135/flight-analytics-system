@@ -102,6 +102,36 @@ class DB:
 
         return [item[0] for item in data]
 
+    def fetch_source_names(self):
+        source_col = self._column("Source")
+
+        query = f"""
+        SELECT DISTINCT TRIM({source_col})
+        FROM flights
+        WHERE {source_col} IS NOT NULL
+        ORDER BY TRIM({source_col})
+        """
+
+        data = self._fetchall(query)
+
+        return [item[0] for item in data]
+
+    def fetch_destinations_for_source(self, source):
+        source_col = self._column("Source")
+        destination_col = self._column("Destination")
+
+        query = f"""
+        SELECT DISTINCT TRIM({destination_col})
+        FROM flights
+        WHERE TRIM({source_col}) = TRIM(%s)
+          AND {destination_col} IS NOT NULL
+        ORDER BY TRIM({destination_col})
+        """
+
+        data = self._fetchall(query, (source,))
+
+        return [item[0] for item in data]
+
     # ============================
     # FETCH FLIGHTS
     # ============================
@@ -118,7 +148,8 @@ class DB:
         query = f"""
         SELECT {airline_col}, {route_col}, {dep_time_col}, {duration_col}, {price_col}
         FROM flights
-        WHERE {source_col} = %s AND {destination_col} = %s
+        WHERE TRIM({source_col}) = TRIM(%s)
+          AND TRIM({destination_col}) = TRIM(%s)
         """
 
         return self._fetchall(query, (source, destination))

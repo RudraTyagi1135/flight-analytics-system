@@ -30,27 +30,33 @@ if user_option == 'Check Flights':
     st.title('✈️ Check Flights')
 
     try:
-        city = db.fetch_city_names()
+        source_cities = db.fetch_source_names()
 
 
-        if not city:
+        if not source_cities:
             st.warning("No city data available")
             st.stop()
 
         col1, col2 = st.columns(2)
 
         with col1:
-            source = st.selectbox('Source', sorted(city))
+            source = st.selectbox('Source', source_cities)
+
+        destination_cities = db.fetch_destinations_for_source(source)
+
+        if not destination_cities:
+            st.warning(f"No destinations found for {source}")
+            st.stop()
 
         with col2:
-            destination = st.selectbox('Destination', sorted(city))
+            destination = st.selectbox('Destination', destination_cities)
 
         if st.button('Search'):
 
             results = db.fetch_all_flights(source, destination)
 
             if not results:
-                st.warning("No flights found")
+                st.warning(f"No flights found from {source} to {destination}")
             else:
                 df = pd.DataFrame(
                     results,
