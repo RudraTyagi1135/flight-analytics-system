@@ -17,6 +17,8 @@ class DB:
                 sslmode="require"
             )
 
+            self.conn.autocommit = True
+
             self.cursor = self.conn.cursor()
 
             st.success("Database Connected Successfully")
