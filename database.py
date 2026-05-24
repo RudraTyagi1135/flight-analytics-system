@@ -11,7 +11,8 @@ class DB:
             user=st.secrets["DB_USER"],
             password=st.secrets["DB_PASSWORD"],
             dbname=st.secrets["DB_NAME"],
-            port=st.secrets["DB_PORT"]
+            port=st.secrets["DB_PORT"],
+            sslmode="require"
         )
 
         self.cursor = self.conn.cursor()
